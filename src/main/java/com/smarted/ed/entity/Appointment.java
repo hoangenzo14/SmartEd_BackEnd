@@ -1,4 +1,3 @@
-// com.example.demo.entity.Appointment.java
 package com.smarted.ed.entity;
 
 import com.smarted.ed.enums.AppointmentStatus;
@@ -22,12 +21,6 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "parent_id", nullable = false)
-    private Integer parentId;
-
-    @ManyToOne
-    @JoinColumn(name = "parent_id", insertable = false, updatable = false)
-    private User parent;
 
     @Column(name = "student_id", nullable = false)
     private Integer studentId;

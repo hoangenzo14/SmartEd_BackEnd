@@ -34,9 +34,9 @@ public class TutorProfile {
     private BigDecimal hourlyRate;
 
     @Column(name = "average_rating")
-    private BigDecimal averageRating = BigDecimal.ZERO;
+    private Double averageRating = 0.0;
 
-    @OneToMany(mappedBy = "tutor", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "tutor", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TutorSubject> tutorSubjects;
 
     @OneToMany(mappedBy = "tutor")

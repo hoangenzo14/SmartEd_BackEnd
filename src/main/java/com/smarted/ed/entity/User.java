@@ -1,4 +1,3 @@
-// com.example.demo.entity.User.java
 package com.smarted.ed.entity;
 
 import com.smarted.ed.enums.RoleType;
@@ -52,11 +51,8 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private TutorProfile tutorProfile;
 
-    @OneToMany(mappedBy = "parent")
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentProfile> students;
-
-    @OneToMany(mappedBy = "parent")
-    private List<Appointment> appointmentsAsParent;
 
     @OneToMany(mappedBy = "parent")
     private List<Feedback> feedbacksAsParent;

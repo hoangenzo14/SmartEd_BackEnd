@@ -1,4 +1,3 @@
-// com.example.demo.entity.StudentProfile.java
 package com.smarted.ed.entity;
 
 import jakarta.persistence.*;
