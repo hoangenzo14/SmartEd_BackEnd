@@ -2,8 +2,11 @@ package com.smarted.ed.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -13,6 +16,8 @@ import java.io.UnsupportedEncodingException;
 
 @Service
 public class EmailServiceImpl implements EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
     @Autowired
     private JavaMailSender mailSender;
@@ -26,6 +31,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendVerificationEmail(String toEmail, String token, String fullName) {
+        log.info("Bắt đầu gửi email xác thực tới: {}", toEmail);
         String verificationUrl = verificationUrlBase + "?token=" + token;
 
         String senderName = "SmartEd Support Team";
@@ -58,14 +64,17 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(content, true);
 
             mailSender.send(message);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Lỗi gửi email xác thực: " + e.getMessage(), e);
+            log.info("Gửi email xác thực thành công tới: {}", toEmail);
+        } catch (MessagingException | UnsupportedEncodingException | MailException e) {
+            log.error("LỖI gửi email xác thực tới {}: {}", toEmail, e.getMessage(), e);
+            // Don't re-throw in @Async method - it would be silently swallowed anyway
         }
-     }
+    }
 
     @Override
     @Async
     public void sendEmail(String toEmail, String subject, String htmlContent) {
+        log.info("Bắt đầu gửi email thông báo tới: {}", toEmail);
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -76,8 +85,9 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
+            log.info("Gửi email thông báo thành công tới: {}", toEmail);
         } catch (Exception e) {
-            System.err.println("Lỗi khi gửi email thông báo tới " + toEmail + ": " + e.getMessage());
+            log.error("LỖI gửi email thông báo tới {}: {}", toEmail, e.getMessage(), e);
         }
     }
 }
