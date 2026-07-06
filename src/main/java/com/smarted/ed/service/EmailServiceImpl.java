@@ -34,6 +34,12 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.brevo-sender-name:SmartEd Support Team}")
     private String brevoSenderName;
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        System.out.println("DEBUG BREVO KEY: " + (brevoApiKey != null && !brevoApiKey.isBlank() ? "ĐÃ NHẬN KEY (" + brevoApiKey.substring(0, Math.min(10, brevoApiKey.length())) + "...)" : "KEY BỊ NULL HOẶC RỖNG"));
+        System.out.println("DEBUG SUPPORT EMAIL: " + fromAddress);
+    }
+
     private void sendViaBrevo(String toEmail, String toName, String subject, String htmlContent) {
         log.info("Bắt đầu gửi email qua Brevo HTTP API tới: {}", toEmail);
         try {
@@ -74,6 +80,9 @@ public class EmailServiceImpl implements EmailService {
             } else {
                 log.error("Gửi email qua Brevo thất bại. Mã lỗi: {}, Chi tiết: {}", response.getStatusCode(), response.getBody());
             }
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            log.error("LỖI gọi API Brevo (REST): Mã status = {}, Nội dung phản hồi lỗi: {}", 
+                      e.getStatusCode(), e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             log.error("Đã xảy ra lỗi khi gửi email qua Brevo: {}", e.getMessage(), e);
         }
