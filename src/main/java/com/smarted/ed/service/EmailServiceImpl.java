@@ -28,6 +28,57 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username}")
     private String fromAddress;
 
+    @Value("${app.mail.brevo-key:}")
+    private String brevoApiKey;
+
+    @Value("${app.mail.brevo-sender-name:SmartEd Support Team}")
+    private String brevoSenderName;
+
+    private void sendViaBrevo(String toEmail, String toName, String subject, String htmlContent) {
+        log.info("Bắt đầu gửi email qua Brevo HTTP API tới: {}", toEmail);
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            
+            java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+            
+            java.util.Map<String, String> sender = new java.util.HashMap<>();
+            sender.put("name", brevoSenderName);
+            sender.put("email", fromAddress);
+            requestBody.put("sender", sender);
+            
+            java.util.List<java.util.Map<String, String>> toList = new java.util.ArrayList<>();
+            java.util.Map<String, String> recipient = new java.util.HashMap<>();
+            recipient.put("email", toEmail);
+            recipient.put("name", toName);
+            toList.add(recipient);
+            requestBody.put("to", toList);
+            
+            requestBody.put("subject", subject);
+            requestBody.put("htmlContent", htmlContent);
+            
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.set("api-key", brevoApiKey);
+            headers.setAccept(java.util.Collections.singletonList(org.springframework.http.MediaType.APPLICATION_JSON));
+            
+            org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
+            
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
+                "https://api.brevo.com/v3/smtp/email",
+                entity,
+                String.class
+            );
+            
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("Đã gửi email qua Brevo HTTP API thành công tới: {}", toEmail);
+            } else {
+                log.error("Gửi email qua Brevo thất bại. Mã lỗi: {}, Chi tiết: {}", response.getStatusCode(), response.getBody());
+            }
+        } catch (Exception e) {
+            log.error("Đã xảy ra lỗi khi gửi email qua Brevo: {}", e.getMessage(), e);
+        }
+    }
+
     @Override
     @Async
     public void sendVerificationEmail(String toEmail, String token, String fullName) {
@@ -54,6 +105,11 @@ public class EmailServiceImpl implements EmailService {
                 + "<p style=\"font-size: 12px; color: #888888; text-align: center;\">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.<br />&copy; 2026 SmartEd. All rights reserved.</p>"
                 + "</div>";
 
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            sendViaBrevo(toEmail, fullName, subject, content);
+            return;
+        }
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -67,7 +123,6 @@ public class EmailServiceImpl implements EmailService {
             log.info("Gửi email xác thực thành công tới: {}", toEmail);
         } catch (MessagingException | UnsupportedEncodingException | MailException e) {
             log.error("LỖI gửi email xác thực tới {}: {}", toEmail, e.getMessage(), e);
-            // Don't re-throw in @Async method - it would be silently swallowed anyway
         }
     }
 
@@ -75,6 +130,12 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendEmail(String toEmail, String subject, String htmlContent) {
         log.info("Bắt đầu gửi email thông báo tới: {}", toEmail);
+        
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            sendViaBrevo(toEmail, "SmartEd User", subject, htmlContent);
+            return;
+        }
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
