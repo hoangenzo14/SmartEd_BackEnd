@@ -28,4 +28,14 @@ public class SignupRequest {
 
     @NotNull(message = "Vai trò không được để trống")
     private RoleType role;
+
+    private String location;
+
+    public SignupRequest(String email, String password, String fullName, String phone, RoleType role) {
+        this.email = email;
+        this.password = password;
+        this.fullName = fullName;
+        this.phone = phone;
+        this.role = role;
+    }
 }

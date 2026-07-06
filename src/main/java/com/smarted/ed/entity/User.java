@@ -48,7 +48,7 @@ public class User {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private TutorProfile tutorProfile;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)

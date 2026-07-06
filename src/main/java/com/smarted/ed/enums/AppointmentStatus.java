@@ -2,7 +2,7 @@ package com.smarted.ed.enums;
 
 public enum AppointmentStatus {
     PENDING,
-    ACCEPTED,
+    CONFIRMED,
     REJECTED,
     CANCELLED,
     COMPLETED

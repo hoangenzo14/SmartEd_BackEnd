@@ -6,6 +6,8 @@ import com.smarted.ed.dto.SignupRequest;
 import com.smarted.ed.entity.User;
 import com.smarted.ed.entity.VerificationToken;
 import com.smarted.ed.enums.RoleType;
+import com.smarted.ed.entity.TutorProfile;
+import com.smarted.ed.repository.TutorProfileRepository;
 import com.smarted.ed.repository.UserRepository;
 import com.smarted.ed.repository.VerificationTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +41,9 @@ public class AuthControllerTest {
     private UserRepository userRepository;
 
     @Autowired
+    private TutorProfileRepository tutorProfileRepository;
+
+    @Autowired
     private VerificationTokenRepository verificationTokenRepository;
 
     @Autowired
@@ -47,10 +52,21 @@ public class AuthControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
     @BeforeEach
     public void setup() {
-        verificationTokenRepository.deleteAll();
-        userRepository.deleteAll();
+        entityManager.createQuery("DELETE FROM Transaction").executeUpdate();
+        entityManager.createQuery("DELETE FROM Feedback").executeUpdate();
+        entityManager.createQuery("DELETE FROM TutorSubject").executeUpdate();
+        entityManager.createQuery("DELETE FROM Appointment").executeUpdate();
+        entityManager.createQuery("DELETE FROM TutorProfile").executeUpdate();
+        entityManager.createQuery("DELETE FROM VerificationToken").executeUpdate();
+        entityManager.createQuery("DELETE FROM StudentProfile").executeUpdate();
+        entityManager.createQuery("DELETE FROM User").executeUpdate();
+        entityManager.createQuery("DELETE FROM Subject").executeUpdate();
+        entityManager.flush();
     }
 
     @Test
@@ -201,5 +217,46 @@ public class AuthControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", containsString("Tài khoản chưa được xác thực email")));
+    }
+
+    @Test
+    public void testTutorSignupAndVerifyEmailCreatesTutorProfile() throws Exception {
+        SignupRequest request = new SignupRequest(
+                "tutor_signup_test@example.com",
+                "password123",
+                "Tutor Signup Test",
+                "0987654322",
+                RoleType.TUTOR
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        // Verify user is created with tutor profile
+        User user = userRepository.findByEmail("tutor_signup_test@example.com").orElseThrow();
+        assertFalse(user.getEmailVerified());
+        TutorProfile tutorProfile = tutorProfileRepository.findById(user.getId()).orElse(null);
+        assertNotNull(tutorProfile);
+        assertEquals(com.smarted.ed.enums.ApprovalStatus.PENDING, tutorProfile.getApprovalStatus());
+
+        // Get the verification token
+        VerificationToken token = verificationTokenRepository.findAll().stream()
+                .filter(t -> t.getUser().getId().equals(user.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        // Verify email
+        mockMvc.perform(get("/api/auth/verify")
+                        .param("token", token.getToken()))
+                .andExpect(status().isOk());
+
+        // Verify user email is verified and TutorProfile is created
+        User verifiedUser = userRepository.findByEmail("tutor_signup_test@example.com").orElseThrow();
+        assertTrue(verifiedUser.getEmailVerified());
+        TutorProfile verifiedTutorProfile = tutorProfileRepository.findById(verifiedUser.getId()).orElse(null);
+        assertNotNull(verifiedTutorProfile);
+        assertEquals(com.smarted.ed.enums.ApprovalStatus.PENDING, verifiedTutorProfile.getApprovalStatus());
     }
 }

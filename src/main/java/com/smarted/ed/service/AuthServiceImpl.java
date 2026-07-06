@@ -14,6 +14,7 @@ import com.smarted.ed.exception.EmailAlreadyExistsException;
 import com.smarted.ed.exception.InvalidTokenException;
 import com.smarted.ed.exception.UserNotActiveException;
 import com.smarted.ed.exception.UserNotVerifiedException;
+import com.smarted.ed.repository.TutorProfileRepository;
 import com.smarted.ed.repository.UserRepository;
 import com.smarted.ed.repository.VerificationTokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private TutorProfileRepository tutorProfileRepository;
 
     @Autowired
     private VerificationTokenRepository verificationTokenRepository;
@@ -71,6 +75,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getRole() == RoleType.TUTOR) {
             TutorProfile tutorProfile = new TutorProfile();
             tutorProfile.setUser(user);
+            tutorProfile.setLocation(request.getLocation());
             tutorProfile.setApprovalStatus(ApprovalStatus.PENDING);
             tutorProfile.setAverageRating(BigDecimal.ZERO);
             user.setTutorProfile(tutorProfile);

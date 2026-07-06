@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 public class TutorSubject {
 
     @EmbeddedId
-    private TutorSubjectId id;  // 👈 Nhúng ID vào bên trong entity
+    private TutorSubjectId id;
 
     @MapsId("tutorId")
     @ManyToOne
@@ -40,26 +41,13 @@ public class TutorSubject {
     @Column(name = "reject_reason")
     private String rejectReason;
 
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "hourly_rate")
+    private BigDecimal hourlyRate;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-}
-
-// TutorSubjectId.java - Vẫn cần nhưng nằm trong cùng file
-@Embeddable
-class TutorSubjectId implements Serializable {
-    @Column(name = "tutor_id")
-    private Integer tutorId;
-
-    @Column(name = "subject_id")
-    private Integer subjectId;
-
-    public TutorSubjectId() {}
-
-    public TutorSubjectId(Integer tutorId, Integer subjectId) {
-        this.tutorId = tutorId;
-        this.subjectId = subjectId;
-    }
-
-    // Getter, Setter, equals, hashCode
 }

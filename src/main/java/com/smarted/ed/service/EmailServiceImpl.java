@@ -61,5 +61,23 @@ public class EmailServiceImpl implements EmailService {
         } catch (MessagingException | UnsupportedEncodingException e) {
             throw new RuntimeException("Lỗi gửi email xác thực: " + e.getMessage(), e);
         }
+     }
+
+    @Override
+    @Async
+    public void sendEmail(String toEmail, String subject, String htmlContent) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromAddress, "SmartEd Notification");
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gửi email thông báo tới " + toEmail + ": " + e.getMessage());
+        }
     }
 }

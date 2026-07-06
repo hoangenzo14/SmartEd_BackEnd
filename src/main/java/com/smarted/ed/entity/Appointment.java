@@ -50,6 +50,7 @@ public class Appointment {
     private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 50)
     private AppointmentStatus status = AppointmentStatus.PENDING;
 
     @Enumerated(EnumType.STRING)

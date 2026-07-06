@@ -1,5 +1,6 @@
 package com.smarted.ed.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,7 @@ public class StudentProfile {
     @Column(name = "parent_id", nullable = false)
     private Integer parentId;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "parent_id", insertable = false, updatable = false)
     private User parent;
@@ -48,6 +50,7 @@ public class StudentProfile {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "student")
     private List<Appointment> appointments;
 }

@@ -20,21 +20,15 @@ public class TutorProfile {
     @Column(name = "user_id")
     private Integer userId;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(columnDefinition = "TEXT")
-    private String bio;
-
     private String location;
 
-    @Column(name = "hourly_rate")
-    private BigDecimal hourlyRate;
-
     @Column(name = "average_rating")
-    private Double averageRating = 0.0;
+    private BigDecimal averageRating = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "tutor", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TutorSubject> tutorSubjects;

@@ -28,8 +28,10 @@ public class Subject {
     private Boolean isActive = true;
 
     @OneToMany(mappedBy = "subject")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<TutorSubject> tutorSubjects;
 
     @OneToMany(mappedBy = "subject")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Appointment> appointments;
 }
