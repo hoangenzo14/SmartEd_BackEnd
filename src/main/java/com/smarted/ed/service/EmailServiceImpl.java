@@ -31,78 +31,76 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.provider:smtp}")
     private String mailProvider;
 
-    @Value("${app.brevo.enabled:false}")
-    private boolean brevoEnabled;
+    @Value("${app.resend.enabled:false}")
+    private boolean resendEnabled;
 
-    @Value("${app.brevo.key:}")
-    private String brevoApiKey;
+    @Value("${app.resend.key:}")
+    private String resendApiKey;
 
-    @Value("${app.brevo.url:https://api.brevo.com/v3/smtp/email}")
-    private String brevoApiUrl;
+    @Value("${app.resend.url:https://api.resend.com/emails}")
+    private String resendApiUrl;
 
-    @Value("${app.brevo.sender-name:SmartEd Support Team}")
-    private String brevoSenderName;
+    @Value("${app.resend.from:onboarding@resend.dev}")
+    private String resendFrom;
+
+    @Value("${app.resend.sender-name:SmartEd Support Team}")
+    private String resendSenderName;
 
     @jakarta.annotation.PostConstruct
     public void init() {
         System.out.println("DEBUG MAIL PROVIDER CONFIG: " + mailProvider);
-        System.out.println("DEBUG BREVO ENABLED: " + brevoEnabled);
-        System.out.println("DEBUG BREVO KEY: " + (brevoApiKey != null && !brevoApiKey.isBlank() ? "ĐÃ NHẬN KEY (" + brevoApiKey.substring(0, Math.min(10, brevoApiKey.length())) + "...)" : "KEY BỊ NULL HOẶC RỖNG"));
+        System.out.println("DEBUG RESEND ENABLED: " + resendEnabled);
+        System.out.println("DEBUG RESEND KEY: " + (resendApiKey != null && !resendApiKey.isBlank() ? "ĐÃ NHẬN KEY (" + resendApiKey.substring(0, Math.min(10, resendApiKey.length())) + "...)" : "KEY BỊ NULL HOẶC RỖNG"));
         System.out.println("DEBUG SUPPORT EMAIL: " + fromAddress);
-        System.out.println("DEBUG ACTIVE MAIL MODE: " + (shouldSubmitViaBrevo() ? "BREVO API" : "LOCAL SMTP (GMAIL)"));
+        System.out.println("DEBUG ACTIVE MAIL MODE: " + (shouldSubmitViaResend() ? "RESEND API" : "LOCAL SMTP (GMAIL)"));
     }
 
-    private boolean shouldSubmitViaBrevo() {
-        // Automatically use Brevo on production Render if key is present, OR if enabled explicitly, OR if provider is explicitly set to "brevo"
-        return brevoEnabled || "brevo".equalsIgnoreCase(mailProvider) || 
-               (System.getenv("RENDER") != null && brevoApiKey != null && !brevoApiKey.isBlank());
+    private boolean shouldSubmitViaResend() {
+        // Automatically use Resend on production Render if key is present, OR if enabled explicitly, OR if provider is explicitly set to "resend"
+        return resendEnabled || "resend".equalsIgnoreCase(mailProvider) || 
+               (System.getenv("RENDER") != null && resendApiKey != null && !resendApiKey.isBlank());
     }
 
-    private void sendViaBrevo(String toEmail, String toName, String subject, String htmlContent) {
-        log.info("Bắt đầu gửi email qua Brevo HTTP API tới: {}", toEmail);
+    private void sendViaResend(String toEmail, String subject, String htmlContent) {
+        log.info("Bắt đầu gửi email qua Resend HTTP API tới: {}", toEmail);
         try {
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
             
             java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
             
-            java.util.Map<String, String> sender = new java.util.HashMap<>();
-            sender.put("name", brevoSenderName);
-            sender.put("email", fromAddress);
-            requestBody.put("sender", sender);
+            // Format from address: "Name <email>"
+            String fromField = resendSenderName + " <" + resendFrom + ">";
+            requestBody.put("from", fromField);
             
-            java.util.List<java.util.Map<String, String>> toList = new java.util.ArrayList<>();
-            java.util.Map<String, String> recipient = new java.util.HashMap<>();
-            recipient.put("email", toEmail);
-            recipient.put("name", toName);
-            toList.add(recipient);
+            java.util.List<String> toList = java.util.Collections.singletonList(toEmail);
             requestBody.put("to", toList);
             
             requestBody.put("subject", subject);
-            requestBody.put("htmlContent", htmlContent);
+            requestBody.put("html", htmlContent);
             
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.set("api-key", brevoApiKey);
+            headers.set("Authorization", "Bearer " + resendApiKey);
             headers.setAccept(java.util.Collections.singletonList(org.springframework.http.MediaType.APPLICATION_JSON));
             
             org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
             
             org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
-                brevoApiUrl,
+                resendApiUrl,
                 entity,
                 String.class
             );
             
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("Đã gửi email qua Brevo HTTP API thành công tới: {}", toEmail);
+                log.info("Đã gửi email qua Resend HTTP API thành công tới: {}", toEmail);
             } else {
-                log.error("Gửi email qua Brevo thất bại. Mã lỗi: {}, Chi tiết: {}", response.getStatusCode(), response.getBody());
+                log.error("Gửi email qua Resend thất bại. Mã lỗi: {}, Chi tiết: {}", response.getStatusCode(), response.getBody());
             }
         } catch (org.springframework.web.client.RestClientResponseException e) {
-            log.error("LỖI gọi API Brevo (REST): Mã status = {}, Nội dung phản hồi lỗi: {}", 
+            log.error("LỖI gọi API Resend (REST): Mã status = {}, Nội dung phản hồi lỗi: {}", 
                       e.getStatusCode(), e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            log.error("Đã xảy ra lỗi khi gửi email qua Brevo: {}", e.getMessage(), e);
+            log.error("Đã xảy ra lỗi khi gửi email qua Resend: {}", e.getMessage(), e);
         }
     }
 
@@ -132,8 +130,8 @@ public class EmailServiceImpl implements EmailService {
                 + "<p style=\"font-size: 12px; color: #888888; text-align: center;\">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.<br />&copy; 2026 SmartEd. All rights reserved.</p>"
                 + "</div>";
 
-        if (shouldSubmitViaBrevo()) {
-            sendViaBrevo(toEmail, fullName, subject, content);
+        if (shouldSubmitViaResend()) {
+            sendViaResend(toEmail, subject, content);
             return;
         }
 
@@ -158,8 +156,8 @@ public class EmailServiceImpl implements EmailService {
     public void sendEmail(String toEmail, String subject, String htmlContent) {
         log.info("Bắt đầu gửi email thông báo tới: {}", toEmail);
         
-        if (shouldSubmitViaBrevo()) {
-            sendViaBrevo(toEmail, "SmartEd User", subject, htmlContent);
+        if (shouldSubmitViaResend()) {
+            sendViaResend(toEmail, subject, htmlContent);
             return;
         }
 
