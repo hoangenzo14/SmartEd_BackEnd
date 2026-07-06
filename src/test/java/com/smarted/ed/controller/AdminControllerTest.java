@@ -267,4 +267,22 @@ public class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @WithMockUser(username = "admin@example.com", roles = "ADMIN")
+    public void testGetAdminRevenueApis() throws Exception {
+        mockMvc.perform(get("/api/admin/revenue/monthly")
+                        .param("year", "2026")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(12)));
+
+        mockMvc.perform(get("/api/admin/revenue/subjects")
+                        .param("year", "2026")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", is(notNullValue())));
+    }
 }

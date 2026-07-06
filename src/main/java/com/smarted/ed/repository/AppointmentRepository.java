@@ -82,7 +82,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     );
 
     @org.springframework.data.jpa.repository.Query(
-        "SELECT a FROM Appointment a " +
+        "SELECT DISTINCT a FROM Appointment a " +
+        "LEFT JOIN FETCH a.subject " +
         "WHERE (a.paymentStatus = com.smarted.ed.enums.PaymentStatus.PAID OR a.status = com.smarted.ed.enums.AppointmentStatus.COMPLETED) " +
         "AND a.startTime >= :startDateTime AND a.startTime <= :endDateTime"
     )
@@ -92,9 +93,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     );
 
     @org.springframework.data.jpa.repository.Query(
-        "SELECT a FROM Appointment a " +
-        "JOIN a.student s " +
-        "WHERE s.parentId = :parentId " +
+        "SELECT DISTINCT a FROM Appointment a " +
+        "LEFT JOIN FETCH a.student " +
+        "WHERE a.student.parentId = :parentId " +
         "AND (a.paymentStatus = com.smarted.ed.enums.PaymentStatus.PAID OR a.status = com.smarted.ed.enums.AppointmentStatus.COMPLETED) " +
         "AND a.startTime >= :startDateTime AND a.startTime <= :endDateTime"
     )

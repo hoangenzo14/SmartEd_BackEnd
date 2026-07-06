@@ -39,6 +39,9 @@ public class FinancialServiceImpl implements FinancialService {
         LocalDateTime endOfYear = LocalDateTime.of(year, 12, 31, 23, 59, 59, 999999999);
 
         List<Appointment> appointments = appointmentRepository.findAllValidAppointmentsForPeriod(startOfYear, endOfYear);
+        if (appointments == null) {
+            appointments = new ArrayList<>();
+        }
 
         // Initialize 12 months
         Map<Integer, BigDecimal> monthlyMap = new HashMap<>();
@@ -48,6 +51,7 @@ public class FinancialServiceImpl implements FinancialService {
 
         // Aggregate
         for (Appointment app : appointments) {
+            if (app == null || app.getStartTime() == null) continue;
             int month = app.getStartTime().getMonthValue();
             BigDecimal price = app.getTotalPrice() != null ? app.getTotalPrice() : BigDecimal.ZERO;
             monthlyMap.put(month, monthlyMap.get(month).add(price));
@@ -70,6 +74,9 @@ public class FinancialServiceImpl implements FinancialService {
         LocalDateTime endOfYear = LocalDateTime.of(year, 12, 31, 23, 59, 59, 999999999);
 
         List<Appointment> appointments = appointmentRepository.findAllValidAppointmentsForPeriod(startOfYear, endOfYear);
+        if (appointments == null) {
+            appointments = new ArrayList<>();
+        }
 
         // Group by subject
         Map<Integer, BigDecimal> subjectRevenueMap = new HashMap<>();
@@ -78,6 +85,7 @@ public class FinancialServiceImpl implements FinancialService {
         BigDecimal totalRevenue = BigDecimal.ZERO;
 
         for (Appointment app : appointments) {
+            if (app == null) continue;
             Integer subId = app.getSubjectId();
             if (subId == null) continue;
 
@@ -92,9 +100,9 @@ public class FinancialServiceImpl implements FinancialService {
         List<AdminSubjectRevenueResponse> result = new ArrayList<>();
         for (Map.Entry<Integer, BigDecimal> entry : subjectRevenueMap.entrySet()) {
             Integer subId = entry.getKey();
-            BigDecimal rev = entry.getValue();
+            BigDecimal rev = entry.getValue() != null ? entry.getValue() : BigDecimal.ZERO;
             double pct = 0.0;
-            if (totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            if (totalRevenue != null && totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
                 pct = rev.multiply(BigDecimal.valueOf(100))
                         .divide(totalRevenue, 2, RoundingMode.HALF_UP)
                         .doubleValue();
@@ -109,7 +117,11 @@ public class FinancialServiceImpl implements FinancialService {
         }
 
         // Sort descending by revenue
-        result.sort((r1, r2) -> r2.getRevenue().compareTo(r1.getRevenue()));
+        result.sort((r1, r2) -> {
+            BigDecimal rev1 = r1.getRevenue() != null ? r1.getRevenue() : BigDecimal.ZERO;
+            BigDecimal rev2 = r2.getRevenue() != null ? r2.getRevenue() : BigDecimal.ZERO;
+            return rev2.compareTo(rev1);
+        });
         return result;
     }
 
