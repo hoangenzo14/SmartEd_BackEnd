@@ -1,106 +1,82 @@
 package com.smarted.ed.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import java.io.UnsupportedEncodingException;
 
 @Service
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
-    @Autowired
-    private JavaMailSender mailSender;
-
     @Value("${app.auth.verification-url}")
     private String verificationUrlBase;
 
-    @Value("${spring.mail.username}")
-    private String fromAddress;
+    @Value("${app.brevo.key:}")
+    private String brevoApiKey;
 
-    @Value("${app.mail.provider:smtp}")
-    private String mailProvider;
+    @Value("${app.brevo.url:https://api.brevo.com/v3/smtp/email}")
+    private String brevoApiUrl;
 
-    @Value("${app.resend.enabled:false}")
-    private boolean resendEnabled;
+    @Value("${app.brevo.from:hoangvietqb1912@gmail.com}")
+    private String brevoFrom;
 
-    @Value("${app.resend.key:}")
-    private String resendApiKey;
-
-    @Value("${app.resend.url:https://api.resend.com/emails}")
-    private String resendApiUrl;
-
-    @Value("${app.resend.from:onboarding@resend.dev}")
-    private String resendFrom;
-
-    @Value("${app.resend.sender-name:SmartEd Support Team}")
-    private String resendSenderName;
+    @Value("${app.brevo.sender-name:SmartEd Support Team}")
+    private String brevoSenderName;
 
     @jakarta.annotation.PostConstruct
     public void init() {
-        System.out.println("DEBUG MAIL PROVIDER CONFIG: " + mailProvider);
-        System.out.println("DEBUG RESEND ENABLED: " + resendEnabled);
-        System.out.println("DEBUG RESEND KEY: " + (resendApiKey != null && !resendApiKey.isBlank() ? "ĐÃ NHẬN KEY (" + resendApiKey.substring(0, Math.min(10, resendApiKey.length())) + "...)" : "KEY BỊ NULL HOẶC RỖNG"));
-        System.out.println("DEBUG SUPPORT EMAIL: " + fromAddress);
-        System.out.println("DEBUG ACTIVE MAIL MODE: " + (shouldSubmitViaResend() ? "RESEND API" : "LOCAL SMTP (GMAIL)"));
+        System.out.println("DEBUG BREVO KEY: " + (brevoApiKey != null && !brevoApiKey.isBlank() ? "ĐÃ NHẬN KEY (" + brevoApiKey.substring(0, Math.min(10, brevoApiKey.length())) + "...)" : "KEY BỊ NULL HOẶC RỖNG"));
+        System.out.println("DEBUG BREVO FROM: " + brevoFrom);
     }
 
-    private boolean shouldSubmitViaResend() {
-        // Automatically use Resend on production Render if key is present, OR if enabled explicitly, OR if provider is explicitly set to "resend"
-        return resendEnabled || "resend".equalsIgnoreCase(mailProvider) || 
-               (System.getenv("RENDER") != null && resendApiKey != null && !resendApiKey.isBlank());
-    }
-
-    private void sendViaResend(String toEmail, String subject, String htmlContent) {
-        log.info("Bắt đầu gửi email qua Resend HTTP API tới: {}", toEmail);
+    private void sendViaBrevo(String toEmail, String toName, String subject, String htmlContent) {
+        log.info("Bắt đầu gửi email qua Brevo HTTP API tới: {}", toEmail);
         try {
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
             
             java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
             
-            // Format from address: "Name <email>"
-            String fromField = resendSenderName + " <" + resendFrom + ">";
-            requestBody.put("from", fromField);
+            java.util.Map<String, String> sender = new java.util.HashMap<>();
+            sender.put("name", brevoSenderName);
+            sender.put("email", brevoFrom);
+            requestBody.put("sender", sender);
             
-            java.util.List<String> toList = java.util.Collections.singletonList(toEmail);
+            java.util.List<java.util.Map<String, String>> toList = new java.util.ArrayList<>();
+            java.util.Map<String, String> recipient = new java.util.HashMap<>();
+            recipient.put("email", toEmail);
+            recipient.put("name", toName);
+            toList.add(recipient);
             requestBody.put("to", toList);
             
             requestBody.put("subject", subject);
-            requestBody.put("html", htmlContent);
+            requestBody.put("htmlContent", htmlContent);
             
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + resendApiKey);
+            headers.set("api-key", brevoApiKey);
             headers.setAccept(java.util.Collections.singletonList(org.springframework.http.MediaType.APPLICATION_JSON));
             
             org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
             
             org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
-                resendApiUrl,
+                brevoApiUrl,
                 entity,
                 String.class
             );
             
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("Đã gửi email qua Resend HTTP API thành công tới: {}", toEmail);
+                log.info("Đã gửi email qua Brevo HTTP API thành công tới: {}", toEmail);
             } else {
-                log.error("Gửi email qua Resend thất bại. Mã lỗi: {}, Chi tiết: {}", response.getStatusCode(), response.getBody());
+                log.error("Gửi email qua Brevo thất bại. Mã lỗi: {}, Chi tiết: {}", response.getStatusCode(), response.getBody());
             }
         } catch (org.springframework.web.client.RestClientResponseException e) {
-            log.error("LỖI gọi API Resend (REST): Mã status = {}, Nội dung phản hồi lỗi: {}", 
+            log.error("LỖI gọi API Brevo (REST): Mã status = {}, Nội dung phản hồi lỗi: {}", 
                       e.getStatusCode(), e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            log.error("Đã xảy ra lỗi khi gửi email qua Resend: {}", e.getMessage(), e);
+            log.error("Đã xảy ra lỗi khi gửi email qua Brevo: {}", e.getMessage(), e);
         }
     }
 
@@ -110,7 +86,6 @@ public class EmailServiceImpl implements EmailService {
         log.info("Bắt đầu gửi email xác thực tới: {}", toEmail);
         String verificationUrl = verificationUrlBase + "?token=" + token;
 
-        String senderName = "SmartEd Support Team";
         String subject = "Xác nhận địa chỉ email của bạn - SmartEd";
         
         String content = "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;\">"
@@ -130,50 +105,13 @@ public class EmailServiceImpl implements EmailService {
                 + "<p style=\"font-size: 12px; color: #888888; text-align: center;\">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.<br />&copy; 2026 SmartEd. All rights reserved.</p>"
                 + "</div>";
 
-        if (shouldSubmitViaResend()) {
-            sendViaResend(toEmail, subject, content);
-            return;
-        }
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromAddress, senderName);
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(content, true);
-
-            mailSender.send(message);
-            log.info("Gửi email xác thực thành công tới: {}", toEmail);
-        } catch (MessagingException | UnsupportedEncodingException | MailException e) {
-            log.error("LỖI gửi email xác thực tới {}: {}", toEmail, e.getMessage(), e);
-        }
+        sendViaBrevo(toEmail, fullName, subject, content);
     }
 
     @Override
     @Async
     public void sendEmail(String toEmail, String subject, String htmlContent) {
         log.info("Bắt đầu gửi email thông báo tới: {}", toEmail);
-        
-        if (shouldSubmitViaResend()) {
-            sendViaResend(toEmail, subject, htmlContent);
-            return;
-        }
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromAddress, "SmartEd Notification");
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-            log.info("Gửi email thông báo thành công tới: {}", toEmail);
-        } catch (Exception e) {
-            log.error("LỖI gửi email thông báo tới {}: {}", toEmail, e.getMessage(), e);
-        }
+        sendViaBrevo(toEmail, "SmartEd User", subject, htmlContent);
     }
 }

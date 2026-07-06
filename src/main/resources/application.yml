@@ -24,25 +24,6 @@ spring:
         use_sql_comments: false
         default_batch_fetch_size: 100
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${SUPPORT_EMAIL}
-    password: ${APP_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          ssl:
-            trust: smtp.gmail.com
-            protocols: TLSv1.2 TLSv1.3
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
-
 app:
   jwt:
     secret: ${JWT_SECRET_KEY}
@@ -51,12 +32,11 @@ app:
     verification-url: ${VERIFICATION_URL:http://localhost:5173/auth/login}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://smart-ed-front-end.vercel.app,http://localhost:5173,http://127.0.0.1:5173}
-  resend:
-    enabled: ${RESEND_ENABLED:false}
-    key: ${RESEND_API_KEY:}
-    url: ${RESEND_API_URL:https://api.resend.com/emails}
-    from: ${RESEND_FROM:onboarding@resend.dev}
-    sender-name: ${RESEND_SENDER_NAME:SmartEd Support Team}
+  brevo:
+    key: ${BREVO_API_KEY:}
+    url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
+    from: ${SUPPORT_EMAIL:vohoang191203@gmail.com}
+    sender-name: ${BREVO_SENDER_NAME:FPT}
 
 vnpay:
   tmn-code: ${VNPAY_TMN_CODE:3KG2WQQV}
