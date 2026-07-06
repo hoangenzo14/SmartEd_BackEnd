@@ -31,23 +31,30 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.provider:smtp}")
     private String mailProvider;
 
-    @Value("${app.mail.brevo-key:}")
+    @Value("${app.brevo.enabled:false}")
+    private boolean brevoEnabled;
+
+    @Value("${app.brevo.key:}")
     private String brevoApiKey;
 
-    @Value("${app.mail.brevo-sender-name:SmartEd Support Team}")
+    @Value("${app.brevo.url:https://api.brevo.com/v3/smtp/email}")
+    private String brevoApiUrl;
+
+    @Value("${app.brevo.sender-name:SmartEd Support Team}")
     private String brevoSenderName;
 
     @jakarta.annotation.PostConstruct
     public void init() {
         System.out.println("DEBUG MAIL PROVIDER CONFIG: " + mailProvider);
+        System.out.println("DEBUG BREVO ENABLED: " + brevoEnabled);
         System.out.println("DEBUG BREVO KEY: " + (brevoApiKey != null && !brevoApiKey.isBlank() ? "ĐÃ NHẬN KEY (" + brevoApiKey.substring(0, Math.min(10, brevoApiKey.length())) + "...)" : "KEY BỊ NULL HOẶC RỖNG"));
         System.out.println("DEBUG SUPPORT EMAIL: " + fromAddress);
         System.out.println("DEBUG ACTIVE MAIL MODE: " + (shouldSubmitViaBrevo() ? "BREVO API" : "LOCAL SMTP (GMAIL)"));
     }
 
     private boolean shouldSubmitViaBrevo() {
-        // Automatically use Brevo on production Render if key is present, OR if provider is explicitly set to "brevo"
-        return "brevo".equalsIgnoreCase(mailProvider) || 
+        // Automatically use Brevo on production Render if key is present, OR if enabled explicitly, OR if provider is explicitly set to "brevo"
+        return brevoEnabled || "brevo".equalsIgnoreCase(mailProvider) || 
                (System.getenv("RENDER") != null && brevoApiKey != null && !brevoApiKey.isBlank());
     }
 
@@ -81,7 +88,7 @@ public class EmailServiceImpl implements EmailService {
             org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
             
             org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
-                "https://api.brevo.com/v3/smtp/email",
+                brevoApiUrl,
                 entity,
                 String.class
             );
