@@ -28,6 +28,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username}")
     private String fromAddress;
 
+    @Value("${app.mail.provider:smtp}")
+    private String mailProvider;
+
     @Value("${app.mail.brevo-key:}")
     private String brevoApiKey;
 
@@ -36,8 +39,16 @@ public class EmailServiceImpl implements EmailService {
 
     @jakarta.annotation.PostConstruct
     public void init() {
+        System.out.println("DEBUG MAIL PROVIDER CONFIG: " + mailProvider);
         System.out.println("DEBUG BREVO KEY: " + (brevoApiKey != null && !brevoApiKey.isBlank() ? "ĐÃ NHẬN KEY (" + brevoApiKey.substring(0, Math.min(10, brevoApiKey.length())) + "...)" : "KEY BỊ NULL HOẶC RỖNG"));
         System.out.println("DEBUG SUPPORT EMAIL: " + fromAddress);
+        System.out.println("DEBUG ACTIVE MAIL MODE: " + (shouldSubmitViaBrevo() ? "BREVO API" : "LOCAL SMTP (GMAIL)"));
+    }
+
+    private boolean shouldSubmitViaBrevo() {
+        // Automatically use Brevo on production Render if key is present, OR if provider is explicitly set to "brevo"
+        return "brevo".equalsIgnoreCase(mailProvider) || 
+               (System.getenv("RENDER") != null && brevoApiKey != null && !brevoApiKey.isBlank());
     }
 
     private void sendViaBrevo(String toEmail, String toName, String subject, String htmlContent) {
@@ -114,7 +125,7 @@ public class EmailServiceImpl implements EmailService {
                 + "<p style=\"font-size: 12px; color: #888888; text-align: center;\">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.<br />&copy; 2026 SmartEd. All rights reserved.</p>"
                 + "</div>";
 
-        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+        if (shouldSubmitViaBrevo()) {
             sendViaBrevo(toEmail, fullName, subject, content);
             return;
         }
@@ -140,7 +151,7 @@ public class EmailServiceImpl implements EmailService {
     public void sendEmail(String toEmail, String subject, String htmlContent) {
         log.info("Bắt đầu gửi email thông báo tới: {}", toEmail);
         
-        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+        if (shouldSubmitViaBrevo()) {
             sendViaBrevo(toEmail, "SmartEd User", subject, htmlContent);
             return;
         }
